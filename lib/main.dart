@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 void main() {
@@ -30,6 +32,10 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int column = 0;
   int row = 0;
+  int randColumn = 0;
+  int randRow = 0;
+  bool isCheck = false;
+  bool isRunning = false;
 
   @override
   void initState() {
@@ -43,12 +49,29 @@ class _MyHomePageState extends State<MyHomePage> {
     return null;
   }
 
+  void randColumnAndRow() async {
+    if (this.column == 0 || this.row == 0) return;
+    final Random random = Random();
+    if (this.isCheck || this.isRunning) return;
+    this.isRunning = true;
+    await Future.delayed(Duration(seconds: 10));
+    setState(() {
+      this.randColumn = random.nextInt(this.column);
+      this.randRow = random.nextInt(this.row);
+      print('ranCol: $randColumn, ranRow: $randRow');
+      this.isRunning = false;
+    });
+    this.randColumnAndRow();
+  }
+
   void _onChange({String columnString = '', String rowString = ''}) {
     final int column = columnString.isNotEmpty ? int.parse(columnString) : 0;
     final int row = rowString.isNotEmpty ? int.parse(rowString) : 0;
     if (column > 0) this.column = column;
     if (row > 0) this.row = row;
+    this.isCheck = false;
     setState(() {});
+    this.randColumnAndRow();
   }
 
   List<Widget> _buildContent(BuildContext context) {
@@ -87,11 +110,13 @@ class _MyHomePageState extends State<MyHomePage> {
     return widgets;
   }
 
+  int calculateColumn(int index) => (index % this.column);
+  int calculateRow(int index) => index ~/ this.column;
+
   Widget _buildGridView(BuildContext context, BoxConstraints constraints) {
     final buttonHeight = 150;
     final width = constraints.maxWidth / column;
     final height = (constraints.maxHeight - buttonHeight - row) / row;
-    print(height);
     final double ratio = width / height;
     return Container(
       height: constraints.maxHeight,
@@ -109,8 +134,26 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             itemCount: this.column * this.row,
             itemBuilder: (context, index) {
-              return Container(
-                color: Colors.amberAccent,
+              final int col = this.calculateColumn(index);
+              final int row = this.calculateRow(index);
+              final bool highlight = this.randColumn == col;
+              final bool random = this.randRow == row && highlight;
+              return GestureDetector(
+                onTap: () {
+                  print('index: $index, col: $col, row: $row');
+                  print(random);
+                },
+                child: Container(
+                  alignment: Alignment.center,
+                  color: row.isEven
+                      ? highlight
+                          ? Colors.redAccent[100]
+                          : Colors.redAccent[700]
+                      : highlight
+                          ? Colors.greenAccent[100]
+                          : Colors.greenAccent[700],
+                  child: Text(random ? 'random' : index.toString()),
+                ),
               );
             },
           ),
@@ -125,17 +168,22 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             itemCount: this.column,
             itemBuilder: (context, index) {
-              return Container(
-                alignment: Alignment.center,
-                margin: EdgeInsets.only(top: 10),
-                child: Text(
-                  '確定',
-                  style: TextStyle(color: Colors.white),
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey[500]),
-                  color: Colors.black45,
+              final col = this.calculateColumn(index);
+              final bool isRandColumn = col == this.randColumn;
+              return GestureDetector(
+                onTap: () => this.isCheck = true,
+                child: Container(
+                  alignment: Alignment.center,
+                  margin: EdgeInsets.only(top: 10),
+                  child: Text(
+                    '確定',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey[500]),
+                    color: isRandColumn ? Colors.black12 : Colors.black45,
+                  ),
                 ),
               );
             },
